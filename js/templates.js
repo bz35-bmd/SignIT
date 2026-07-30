@@ -10,8 +10,8 @@ const Templates = {
     return Object.entries(links)
       .filter(([, url]) => url)
       .map(([platform, url]) =>
-        `<a href="${url}" target="_blank" style="text-decoration:none;margin-right:5px">
-          <img src="${this.socialIcons[platform] || ''}" alt="${platform}" style="width:16px;height:16px;border:none">
+        `<a href="${url}" target="_blank" style="text-decoration:none;margin:0 2px">
+          <img src="${this.socialIcons[platform] || ''}" alt="${platform}" style="width:14px;height:14px;border:none;opacity:.6">
         </a>`
       )
       .join('');
@@ -34,131 +34,115 @@ const Templates = {
 
   getQRCodeUrl(data) {
     const vcard = this.getVCard(data);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(vcard)}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(vcard)}`;
   },
 
   getDynamicStatus() {
     const now = new Date();
     const day = now.getDay();
     const hours = now.getHours();
-    if (day === 0 || day === 6) return '👤 En ligne cette semaine';
-    if (hours < 9 || hours >= 18) return '👤 Hors horaires de travail';
-    return '';
+    if (day === 0 || day === 6) return '🟡 En ligne cette semaine';
+    if (hours >= 9 && hours < 18) return '🟢 En ligne';
+    return '🟡 Hors horaires de travail';
   },
 
   getFontFamily(font) {
     return font || 'Arial,Helvetica,sans-serif';
   },
 
-  classic(data, color, font) {
-    const tel = [data.phone, data.phone2].filter(Boolean).join(' / ');
+  // ---- COMMON LAYOUT BUILDER ----
+  _buildLayout(data, color, font, opts) {
     const ff = this.getFontFamily(font);
+    const tel = [data.phone, data.phone2].filter(Boolean).join(' / ');
     const status = data.dynamicStatus ? this.getDynamicStatus() : '';
-    return `
-      <table cellpadding="0" cellspacing="0" border="0" style="font-family:${ff};font-size:13px;color:#333;line-height:1.5;max-width:560px">
-        ${data.logoUrl ? `<tr><td colspan="2" style="padding-bottom:8px"><img src="${data.logoUrl}" alt="Logo" style="max-height:55px;max-width:180px;"></td></tr>` : ''}
+    const rLab = `color:#888;font-size:11px;padding-right:6px;white-space:nowrap`;
+
+    // Left column: logo then social icons
+    const left = [];
+    if (data.logoUrl) {
+      left.push(`<div style="margin-bottom:8px"><img src="${data.logoUrl}" alt="Logo" style="max-height:64px;max-width:180px;display:block"></div>`);
+    }
+    if (data.socialHtml) {
+      left.push(`<div>${data.socialHtml}</div>`);
+    }
+    const hasLeft = left.length > 0;
+
+    // Right column: identity + contacts
+    const right = [];
+    const namePart = `<span style="font-size:16px;font-weight:700;color:#1a1a1a">${data.firstName} ${data.lastName}</span>`;
+    const photoPart = data.photoUrl ? `<img src="${data.photoUrl}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-left:8px">` : '';
+    right.push(`<div style="margin-bottom:1px">${namePart}${photoPart}</div>`);
+    const dept = (data.department || '').trim();
+    if (data.title || data.company || dept) {
+      const line = [data.title, data.company].filter(Boolean).join(', ');
+      const full = dept ? (line ? line + ' · ' + dept : dept) : line;
+      right.push(`<div style="font-size:12px;font-weight:500;color:${color};margin:1px 0 5px 0;padding-bottom:5px;border-bottom:2px solid ${color}">${full}</div>`);
+    } else {
+      right.push(`<div style="margin-bottom:5px"></div>`);
+    }
+
+    const addRow = (label, value) => {
+      right.push(`<div style="font-size:12px;line-height:1.6;word-break:break-word"><span style="${rLab}">${label}</span>${value}</div>`);
+    };
+    if (data.mobile && data.email) {
+      right.push(`<table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+        <td style="font-size:12px;line-height:1.6;vertical-align:top;padding:0 10px 0 0;white-space:nowrap"><span style="color:#888;font-size:11px;padding-right:4px">Mobile</span>${data.mobile}</td>
+        <td style="font-size:12px;line-height:1.6;vertical-align:top;white-space:nowrap"><span style="color:#888;font-size:11px;padding-right:4px">Email</span><a href="mailto:${data.email}" style="color:${color};text-decoration:none">${data.email}</a></td>
+      </tr></table>`);
+    } else {
+      if (data.mobile) right.push(`<div style="font-size:12px;line-height:1.6;white-space:nowrap"><span style="color:#888;font-size:11px;padding-right:4px">Mobile</span>${data.mobile}</div>`);
+      if (data.email) right.push(`<div style="font-size:12px;line-height:1.6;white-space:nowrap"><span style="color:#888;font-size:11px;padding-right:4px">Email</span><a href="mailto:${data.email}" style="color:${color};text-decoration:none">${data.email}</a></div>`);
+    }
+    if (tel) addRow('Tel', tel);
+    if (data.phone2 && !tel) addRow('Tel', data.phone2);
+    if (data.address) addRow('Adresse', `<span style="color:#666">${data.address}</span>`);
+    if (data.website) addRow('Web', `<a href="${data.website}" style="color:${color};text-decoration:none" target="_blank">${data.website}</a>`);
+
+    // Bottom marks (left to right) — table for html2canvas compatibility
+    const bottom = [];
+    if (status) bottom.push(`<td style="padding:0 12px 0 0;vertical-align:middle;white-space:nowrap"><span style="font-size:10px;color:#888">${status}</span></td>`);
+    if (data.qrCode) bottom.push(`<td style="padding:0 8px 0 0;vertical-align:middle"><img src="${this.getQRCodeUrl(data)}" alt="QR" style="width:38px;height:38px;border:none;opacity:.8;display:block"></td>`);
+    if (data.banner) bottom.push(`<td style="padding:0;vertical-align:middle"><span style="background:${hexToRgba(color, .1)};color:${color};padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;white-space:nowrap">${data.bannerLink ? `<a href="${data.bannerLink}" target="_blank" style="color:${color};text-decoration:none">${data.banner}</a>` : data.banner}</span></td>`);
+
+    const wrap = opts.wrap || (s => s);
+    const mainStyle = `font-family:${ff};font-size:13px;color:#333;${opts.tableStyle || ''}`;
+
+    return wrap(`
+      <table cellpadding="0" cellspacing="0" border="0" style="${mainStyle}">
         <tr>
-          ${data.photoUrl ? `<td valign="middle" style="padding-right:15px"><img src="${data.photoUrl}" alt="" style="width:70px;height:70px;border-radius:50%;object-fit:cover"></td>` : ''}
-          <td valign="middle">
-            <div style="font-size:16px;font-weight:bold;color:#222">${data.firstName} ${data.lastName}</div>
-            ${data.title ? `<div style="color:${color};font-weight:600;margin:2px 0">${data.title}</div>` : ''}
-            ${data.company ? `<div style="color:#666;font-size:12px">${data.company}</div>` : ''}
+          ${hasLeft ? `<td valign="top" style="padding-right:16px;${opts.leftStyle || ''}">${left.join('')}</td>` : ''}
+          <td valign="top" style="${opts.rightStyle || ''}">
+            ${right.join('')}
           </td>
         </tr>
-        <tr><td colspan="2" style="height:8px"></td></tr>
-        <tr>
-          <td colspan="2">
-            <table cellpadding="0" cellspacing="0" border="0">
-              ${data.mobile ? `<tr><td style="padding:2px 0;color:#888;font-size:12px;width:60px;vertical-align:top">Mobile</td><td style="padding:2px 0">${data.mobile}</td></tr>` : ''}
-              ${data.email ? `<tr><td style="padding:2px 0;color:#888;font-size:12px;vertical-align:top">Email</td><td style="padding:2px 0"><a href="mailto:${data.email}" style="color:${color};text-decoration:none">${data.email}</a></td></tr>` : ''}
-              ${tel ? `<tr><td style="padding:2px 0;color:#888;font-size:12px;vertical-align:top">Tel</td><td style="padding:2px 0">${tel}</td></tr>` : ''}
-              ${data.website ? `<tr><td style="padding:2px 0;color:#888;font-size:12px;vertical-align:top">Web</td><td style="padding:2px 0"><a href="${data.website}" style="color:${color};text-decoration:none" target="_blank">${data.website}</a></td></tr>` : ''}
-              ${data.address ? `<tr><td style="padding:2px 0;color:#888;font-size:12px;vertical-align:top">Adresse</td><td style="padding:2px 0;color:#555">${data.address}</td></tr>` : ''}
-            </table>
-          </td>
-        </tr>
-        ${data.socialHtml ? `<tr><td colspan="2" style="height:6px"></td></tr><tr><td colspan="2">${data.socialHtml}</td></tr>` : ''}
-        ${status ? `<tr><td colspan="2" style="height:4px"></td></tr><tr><td colspan="2" style="font-size:11px;color:#888;font-style:italic">${status}</td></tr>` : ''}
-        ${data.banner ? `<tr><td colspan="2" style="height:6px"></td></tr><tr><td colspan="2" style="background:${color};color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;text-align:center">${data.bannerLink ? `<a href="${data.bannerLink}" target="_blank" style="color:#fff;text-decoration:none">${data.banner}</a>` : data.banner}</td></tr>` : ''}
-        ${data.qrCode ? `<tr><td colspan="2" style="height:6px"></td></tr><tr><td colspan="2"><img src="${this.getQRCodeUrl(data)}" alt="QR" style="width:60px;height:60px;border:none"></td></tr>` : ''}
-        <tr><td colspan="2" style="height:6px;border-top:1px solid #ddd;padding-top:4px;font-size:9px;color:#aaa">Confidentiel</td></tr>
-      </table>`;
+        ${bottom.length ? `<tr><td colspan="${hasLeft ? 2 : 1}" style="padding-top:6px;border-top:1px solid #eee"><table cellpadding="0" cellspacing="0" border="0"><tr>${bottom.join('')}</tr></table></td></tr>` : ''}
+      </table>
+    `);
+  },
+
+  classic(data, color, font) {
+    return this._buildLayout(data, color, font, { tableStyle: 'max-width:640px' });
   },
 
   modern(data, color, font) {
-    const tel = [data.phone, data.phone2].filter(Boolean).join(' / ');
-    const ff = this.getFontFamily(font);
-    const status = data.dynamicStatus ? this.getDynamicStatus() : '';
-    return `
-      <table cellpadding="0" cellspacing="0" border="0" style="font-family:${ff};font-size:13px;color:#444;line-height:1.5;max-width:560px">
-        <tr>
-          <td style="background:${color};width:5px;border-radius:3px 0 0 3px"></td>
-          <td style="padding:16px 18px">
-            ${data.logoUrl ? `<div style="margin-bottom:8px"><img src="${data.logoUrl}" alt="Logo" style="max-height:45px;max-width:160px;"></div>` : ''}
-            <table cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                ${data.photoUrl ? `<td valign="top" style="padding-right:14px"><img src="${data.photoUrl}" alt="" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid ${color}"></td>` : ''}
-                <td valign="top">
-                  <div style="font-size:17px;font-weight:700;color:#222">${data.firstName} ${data.lastName}</div>
-                  ${data.title ? `<div style="color:${color};font-weight:500;margin:1px 0">${data.title}</div>` : ''}
-                  ${data.company ? `<div style="color:#888;font-size:12px">${data.company}</div>` : ''}
-                </td>
-              </tr>
-            </table>
-            <div style="height:10px;border-top:1px solid #eee;margin:8px 0"></div>
-            <table cellpadding="0" cellspacing="0" border="0">
-              ${data.mobile ? `<tr><td style="padding:2px 0;font-size:12px"><span style="color:#999;width:20px;display:inline-block">📱</span>${data.mobile}</td></tr>` : ''}
-              ${data.email ? `<tr><td style="padding:2px 0;font-size:12px"><span style="color:#999;width:20px;display:inline-block">✉</span><a href="mailto:${data.email}" style="color:${color};text-decoration:none">${data.email}</a></td></tr>` : ''}
-              ${tel ? `<tr><td style="padding:2px 0;font-size:12px"><span style="color:#999;width:20px;display:inline-block">📞</span>${tel}</td></tr>` : ''}
-              ${data.website ? `<tr><td style="padding:2px 0;font-size:12px"><span style="color:#999;width:20px;display:inline-block">🌐</span><a href="${data.website}" style="color:${color};text-decoration:none" target="_blank">${data.website}</a></td></tr>` : ''}
-              ${data.address ? `<tr><td style="padding:2px 0;font-size:12px"><span style="color:#999;width:20px;display:inline-block">📍</span>${data.address}</td></tr>` : ''}
-            </table>
-            ${data.socialHtml ? `<div style="height:6px"></div>${data.socialHtml}` : ''}
-            ${status ? `<div style="margin-top:4px;font-size:11px;color:#888;font-style:italic">${status}</div>` : ''}
-            ${data.banner ? `<div style="margin-top:6px;background:${color};color:#fff;padding:5px 10px;border-radius:4px;font-size:11px;text-align:center">${data.bannerLink ? `<a href="${data.bannerLink}" target="_blank" style="color:#fff;text-decoration:none">${data.banner}</a>` : data.banner}</div>` : ''}
-            ${data.qrCode ? `<div style="margin-top:6px"><img src="${this.getQRCodeUrl(data)}" alt="QR" style="width:55px;height:55px;border:none"></div>` : ''}
-          </td>
-        </tr>
-      </table>`;
+    return this._buildLayout(data, color, font, {
+      tableStyle: 'max-width:620px;border:1px solid #e8e8e8;border-radius:6px',
+      leftStyle: `background:${hexToRgba(color, .06)};padding:10px 12px;border-radius:4px;`,
+      rightStyle: `padding-left:2px`,
+    });
   },
 
   corporate(data, color, font) {
-    const tel = [data.phone, data.phone2].filter(Boolean).join(' / ');
-    const ff = this.getFontFamily(font);
-    const companyName = data.company || (data.title && data.title.includes(',') ? data.title.split(',')[1].trim() : 'ENTREPRISE');
-    const status = data.dynamicStatus ? this.getDynamicStatus() : '';
-    return `
-      <table cellpadding="0" cellspacing="0" border="0" style="font-family:${ff};font-size:12px;color:#444;line-height:1.4;max-width:560px">
-        ${data.logoUrl ? `<tr><td colspan="2" style="padding-bottom:6px"><img src="${data.logoUrl}" alt="Logo" style="max-height:50px;max-width:180px;"></td></tr>` : ''}
-        <tr>
-          <td colspan="2" style="border-bottom:3px solid ${color};padding-bottom:6px">
-            <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
-              <td><div style="font-size:17px;font-weight:bold;color:${color}">${companyName}</div></td>
-              ${data.photoUrl ? `<td align="right"><img src="${data.photoUrl}" alt="" style="width:50px;height:50px;object-fit:cover;border-radius:4px"></td>` : ''}
-            </tr></table>
-          </td>
-        </tr>
-        <tr><td colspan="2" style="height:6px"></td></tr>
-        <tr>
-          <td style="padding-right:18px;white-space:nowrap;min-width:160px">
-            <div style="font-size:15px;font-weight:bold;color:#222">${data.firstName} ${data.lastName}</div>
-            ${data.title ? `<div style="color:${color};font-weight:600;font-size:11px;margin-top:1px">${data.title}</div>` : ''}
-          </td>
-          <td style="border-left:1px solid ${color};padding-left:18px">
-            <table cellpadding="0" cellspacing="0" border="0">
-              ${data.mobile ? `<tr><td style="padding:1px 0;color:#888;font-size:11px">Mobile:</td><td style="padding:1px 0 1px 8px;font-size:11px">${data.mobile}</td></tr>` : ''}
-              ${data.email ? `<tr><td style="padding:1px 0;color:#888;font-size:11px">Email:</td><td style="padding:1px 0 1px 8px;font-size:11px"><a href="mailto:${data.email}" style="color:${color};text-decoration:none">${data.email}</a></td></tr>` : ''}
-              ${tel ? `<tr><td style="padding:1px 0;color:#888;font-size:11px">Tel:</td><td style="padding:1px 0 1px 8px;font-size:11px">${tel}</td></tr>` : ''}
-              ${data.website ? `<tr><td style="padding:1px 0;color:#888;font-size:11px">Web:</td><td style="padding:1px 0 1px 8px;font-size:11px"><a href="${data.website}" style="color:${color};text-decoration:none" target="_blank">${data.website}</a></td></tr>` : ''}
-              ${data.address ? `<tr><td style="padding:1px 0;color:#888;font-size:11px">Adresse:</td><td style="padding:1px 0 1px 8px;font-size:11px;color:#666">${data.address}</td></tr>` : ''}
-            </table>
-          </td>
-        </tr>
-        ${data.socialHtml ? `<tr><td colspan="2" style="height:4px;border-top:1px solid #eee"></td></tr><tr><td colspan="2" style="padding-top:4px">${data.socialHtml}</td></tr>` : ''}
-        ${status ? `<tr><td colspan="2" style="padding-top:4px;font-size:10px;color:#888;font-style:italic">${status}</td></tr>` : ''}
-        ${data.banner ? `<tr><td colspan="2" style="padding-top:6px"><div style="background:${color};color:#fff;padding:5px 10px;border-radius:4px;font-size:11px;text-align:center">${data.bannerLink ? `<a href="${data.bannerLink}" target="_blank" style="color:#fff;text-decoration:none">${data.banner}</a>` : data.banner}</div></td></tr>` : ''}
-        ${data.qrCode ? `<tr><td colspan="2" style="padding-top:6px"><img src="${this.getQRCodeUrl(data)}" alt="QR" style="width:55px;height:55px;border:none"></td></tr>` : ''}
-      </table>`;
+    const companyName = data.company || 'ENTREPRISE';
+    return this._buildLayout(data, color, font, {
+      tableStyle: 'max-width:640px;border:1px solid #ddd;border-radius:6px',
+      wrap: s => `<table cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr><td style="border-top:3px solid ${color};padding:0 18px">
+          <div style="border-bottom:1px solid #eee;padding:10px 0 6px;font-size:11px;font-weight:700;color:${color};letter-spacing:.5px">${companyName}</div>
+        </td></tr>
+        <tr><td style="padding:10px 18px 14px">${s}</td></tr>
+      </table>`,
+    });
   },
 
   render(data, templateName, color, font) {
@@ -166,3 +150,10 @@ const Templates = {
     return fn.call(this, data, color, font);
   }
 };
+
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
