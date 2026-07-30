@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Signature Pro - Générateur de Signatures Email</title>
+  <title>SignIT - Générateur de Signatures Email</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link id="googleFont" rel="stylesheet">
 </head>
 <body>
   <nav class="navbar">
     <div class="container">
-      <h1 class="logo">✉ Signature Pro</h1>
+      <h1 class="logo">✉ SignIT</h1>
       <div class="nav-controls">
         <button id="darkModeToggle" class="btn btn-icon" title="Mode sombre">🌙</button>
       </div>
@@ -43,7 +46,25 @@
             </div>
             <div class="form-group">
               <label>Couleur</label>
-              <input type="color" id="color" value="#1a73e8">
+              <div class="cp-dropdown" id="cpDropdown">
+                <button type="button" class="cp-dropdown-trigger" id="cpTrigger">
+                  <span class="cp-dot" id="cpDot" style="background:#1a73e8"></span>
+                  <span id="cpLabel">Bleu</span>
+                  <span class="cp-arrow">▾</span>
+                </button>
+                <div class="cp-dropdown-menu" id="cpMenu">
+                  <div class="cp-option" data-color="#1a73e8"><span class="cp-dot" style="background:#1a73e8"></span>Bleu</div>
+                  <div class="cp-option" data-color="#dc2626"><span class="cp-dot" style="background:#dc2626"></span>Rouge</div>
+                  <div class="cp-option" data-color="#16a34a"><span class="cp-dot" style="background:#16a34a"></span>Vert</div>
+                  <div class="cp-option" data-color="#0d9488"><span class="cp-dot" style="background:#0d9488"></span>Teal</div>
+                  <div class="cp-option" data-color="#7c3aed"><span class="cp-dot" style="background:#7c3aed"></span>Violet</div>
+                  <div class="cp-option" data-color="#ea580c"><span class="cp-dot" style="background:#ea580c"></span>Orange</div>
+                  <div class="cp-option" data-color="#be185d"><span class="cp-dot" style="background:#be185d"></span>Rose</div>
+                  <div class="cp-option" data-color="#1e293b"><span class="cp-dot" style="background:#1e293b"></span>Foncé</div>
+                  <div class="cp-option cp-option-custom" id="cpCustom"><span class="cp-dot cp-dot-plus">+</span>Personnalisée…</div>
+                </div>
+                <input type="color" id="color" value="#1a73e8" style="display:none">
+              </div>
             </div>
           </div>
           <div class="form-row">
@@ -62,15 +83,7 @@
             </div>
             <div class="form-group">
               <label>Département</label>
-              <select id="department">
-                <option value="">Aucun</option>
-                <option value="direction">Direction</option>
-                <option value="commercial">Commercial</option>
-                <option value="support">Support technique</option>
-                <option value="marketing">Marketing</option>
-                <option value="rh">Ressources Humaines</option>
-                <option value="finance">Finance</option>
-              </select>
+              <input type="text" id="department" placeholder="ex: Direction, Marketing, Support..." value="Direction">
             </div>
           </div>
 
@@ -90,20 +103,20 @@
           <div class="form-row">
             <div class="form-group">
               <label>Prénom</label>
-              <input type="text" id="firstName" value="Billel"  required>
+              <input type="text" id="firstName" placeholder="ex: Jean" value="Jean" required>
             </div>
             <div class="form-group">
               <label>Nom</label>
-              <input type="text" id="lastName" value="ZOUAK" required>
+              <input type="text" id="lastName" placeholder="ex: Dupont" value="Dupont" required>
             </div>
           </div>
           <div class="form-group">
             <label>Poste / Titre</label>
-            <input type="text" id="title" value="Helpdesk specialist, FALAIT SPA">
+            <input type="text" id="title" placeholder="ex: Directeur Commercial" value="Directeur Commercial">
           </div>
           <div class="form-group">
             <label>Société</label>
-            <input type="text" id="company" value="FALAIT SPA">
+            <input type="text" id="company" placeholder="ex: Votre Société" value="TechInnov SARL">
           </div>
 
           <hr class="hr-sm">
@@ -111,39 +124,39 @@
 
           <div class="form-group">
             <label>Email</label>
-            <input type="email" id="email" value="b.zouak@falait.com" required>
+            <input type="email" id="email" placeholder="ex: jean.dupont@entreprise.com" value="jean.dupont@techinnov.fr" required>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label>Mobile</label>
-              <input type="tel" id="mobile" value="+213 (0) 561 75 92 04 11">
+              <input type="tel" id="mobile" placeholder="ex: +33 6 12 34 56 78" value="+33 6 12 34 56 78">
             </div>
             <div class="form-group">
               <label>Téléphone</label>
-              <input type="tel" id="phone" value="+213 (0) 23 85 05 12">
+              <input type="tel" id="phone" placeholder="ex: +33 1 23 45 67 89" value="+33 1 23 45 67 89">
             </div>
           </div>
           <div class="form-group">
             <label>Téléphone 2</label>
-            <input type="tel" id="phone2" value="+213 (0) 23 85 05 14">
+            <input type="tel" id="phone2" placeholder="ex: +33 1 98 76 54 32" value="+33 1 98 76 54 32">
           </div>
           <div class="form-row">
             <div class="form-group">
               <label>Site web</label>
-              <input type="url" id="website" value="https://www.falait.com">
+              <input type="url" id="website" placeholder="ex: https://www.entreprise.com" value="https://www.techinnov.fr">
             </div>
             <div class="form-group">
               <label>Adresse</label>
-              <input type="text" id="address" value="LOT 65 Z.I Rouiba, Alger, Algerie">
+              <input type="text" id="address" placeholder="ex: 123 Rue Exemple, 75001 Paris, France" value="123 Avenue de la République, 75011 Paris">
             </div>
           </div>
           <div class="form-group">
             <label>Réseaux sociaux</label>
             <div class="social-inputs">
-              <input type="url" id="linkedin" placeholder="LinkedIn URL" value="https://www.linkedin.com/company/falait">
-              <input type="url" id="facebook" placeholder="Facebook URL" value="https://www.facebook.com/falait">
-              <input type="url" id="twitter" placeholder="Twitter URL">
-              <input type="url" id="instagram" placeholder="Instagram URL">
+              <input type="url" id="linkedin" placeholder="ex: https://www.linkedin.com/in/votre-profil" value="https://www.linkedin.com/in/jeandupont">
+              <input type="url" id="facebook" placeholder="ex: https://www.facebook.com/votre-page" value="https://www.facebook.com/techinnov">
+              <input type="url" id="twitter" placeholder="ex: https://twitter.com/votre-compte" value="https://twitter.com/techinnov">
+              <input type="url" id="instagram" placeholder="ex: https://www.instagram.com/votre-compte" value="https://www.instagram.com/techinnov">
             </div>
           </div>
 
@@ -162,17 +175,17 @@
               <label>Signature dynamique</label>
               <select id="dynamicStatus">
                 <option value="0">Non</option>
-                <option value="1">Oui (jour férié/week-end)</option>
+                <option value="1" selected>Oui</option>
               </select>
             </div>
           </div>
           <div class="form-group">
             <label>Bannière promotionnelle (HTML)</label>
-            <input type="text" id="banner" placeholder="Ex: Découvrez nos nouveaux produits laitiers !" value="Découvrez nos nouvelles gammes Tartino & Chezzy">
+            <input type="text" id="banner" placeholder="ex: Découvrez nos nouveaux produits !" value="Découvrez notre nouvelle gamme 2026 !">
           </div>
           <div class="form-group">
             <label>Lien de la bannière</label>
-            <input type="url" id="bannerLink" placeholder="https://..." value="https://www.falait.com">
+            <input type="url" id="bannerLink" placeholder="ex: https://www.votre-site.com" value="https://www.techinnov.fr/promotions">
           </div>
 
           <hr>
@@ -181,7 +194,6 @@
             <button type="submit" class="btn btn-primary">Aperçu ➔</button>
             <button type="button" id="saveToTeamBtn" class="btn btn-outline">Ajouter à l'équipe</button>
             <button type="button" id="copyHtmlBtn" class="btn btn-outline">Copier HTML</button>
-            <button type="button" id="testEmailBtn" class="btn btn-outline">Tester par email</button>
           </div>
         </form>
       </div>
@@ -207,25 +219,9 @@
           <h2>Gestion d'équipe</h2>
           <p>Gérez les signatures de tous les membres</p>
         </div>
-        <div class="team-toolbar">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Filtrer par département</label>
-              <select id="teamFilter">
-                <option value="">Tous</option>
-                <option value="direction">Direction</option>
-                <option value="commercial">Commercial</option>
-                <option value="support">Support technique</option>
-                <option value="marketing">Marketing</option>
-                <option value="rh">Ressources Humaines</option>
-                <option value="finance">Finance</option>
-              </select>
-            </div>
-            <div class="form-group" style="align-self:flex-end">
-              <button id="exportTeamPdfBtn" class="btn btn-sm btn-primary">Export PDF</button>
-              <button id="exportTeamCsvBtn" class="btn btn-sm btn-outline">Export CSV</button>
-            </div>
-          </div>
+        <div class="export-actions" style="margin-bottom:16px">
+          <button id="exportTeamPdfBtn" class="btn btn-sm btn-primary">Export PDF</button>
+          <button id="exportTeamCsvBtn" class="btn btn-sm btn-outline">Export CSV</button>
         </div>
         <div id="teamList" class="team-list">
           <p class="text-muted">Aucun membre. Créez une signature puis cliquez "Ajouter à l'équipe".</p>
@@ -271,5 +267,37 @@
   <script src="lib/papaparse.min.js"></script>
   <script src="js/templates.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- AI Assistant -->
+  <div class="ai-assistant" id="aiAssistant">
+    <button class="ai-fab" id="aiFab" aria-label="Assistant">
+      <svg width="28" height="22" viewBox="0 0 80 40" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none">
+        <path d="M10 30 C15 10, 20 10, 25 20 C30 30, 32 35, 38 18 C44 2, 48 25, 52 28 C56 31, 60 15, 65 22 C70 29, 72 20, 75 15"/>
+      </svg>
+    </button>
+    <div class="ai-panel" id="aiPanel">
+      <div class="ai-header">
+        <strong>🤖 Assistante SignIT</strong>
+        <button class="ai-close" id="aiClose">&times;</button>
+      </div>
+      <div class="ai-messages" id="aiMessages">
+        <div class="ai-msg ai-msg-bot">Bonjour ! 🤖 Je suis l'assistante **SignIT**. Posez-moi une question ou cliquez sur un sujet :</div>
+      </div>
+      <div class="ai-suggestions" id="aiSuggestions">
+        <button class="ai-chip" data-q="creer">✍️ Créer</button>
+        <button class="ai-chip" data-q="template">🎨 Template</button>
+        <button class="ai-chip" data-q="couleur">🎯 Couleur</button>
+        <button class="ai-chip" data-q="equipe">👥 Équipe</button>
+        <button class="ai-chip" data-q="export">📤 Export</button>
+        <button class="ai-chip" data-q="statut">🔄 Statut</button>
+        <button class="ai-chip" data-q="qr">📱 QR code</button>
+        <button class="ai-chip" data-q="import">📂 Import</button>
+      </div>
+      <div class="ai-input-row">
+        <input type="text" id="aiInput" placeholder="Posez votre question…" maxlength="120">
+        <button id="aiSendBtn">Envoyer</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
