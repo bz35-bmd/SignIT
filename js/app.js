@@ -143,7 +143,9 @@
     if (!el) return;
     const naturalW = el.offsetWidth;
     const naturalH = el.offsetHeight;
-    const containerW = preview.clientWidth;
+    const cs = getComputedStyle(preview);
+    const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    const containerW = preview.clientWidth - padX;
     if (!naturalW || !naturalH || containerW <= 0) return;
     const scale = Math.min(1, containerW / naturalW);
     if (scale < 1) {
@@ -503,6 +505,27 @@
         switchTab(link.getAttribute('href').replace('#', ''));
       });
     });
+
+    // Brand / logo → back to home (signature tab)
+    const brand = document.querySelector('.brand');
+    if (brand) brand.addEventListener('click', e => {
+      e.preventDefault();
+      switchTab('single');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Back to top
+    const backToTop = $('#backToTop');
+    let scrollQueued = false;
+    window.addEventListener('scroll', () => {
+      if (scrollQueued) return;
+      scrollQueued = true;
+      requestAnimationFrame(() => {
+        backToTop.classList.toggle('show', window.scrollY > 300);
+        scrollQueued = false;
+      });
+    }, { passive: true });
+    backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
     // Form submit
     form.addEventListener('submit', e => {
