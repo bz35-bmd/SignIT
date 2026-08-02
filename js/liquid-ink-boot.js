@@ -88,10 +88,11 @@ function initLiquidInk() {
     if (document.hidden) return;
     const x = window.innerWidth * (0.1 + Math.random() * 0.8);
     const y = window.innerHeight * (0.15 + Math.random() * 0.75);
-    for (let k = 0; k < 3; k++) {
+    const n = coarse ? 2 : 3;
+    for (let k = 0; k < n; k++) {
       splat(x + (Math.random() - 0.5) * 80, y + (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 26, (Math.random() - 0.5) * 26);
     }
-  }, 2200);
+  }, coarse ? 3200 : 2200);
   const onVis = () => { try { document.hidden ? sim.stop() : sim.start(); } catch (e) {} };
 
   window.addEventListener('pointermove', onMove, { passive: true });

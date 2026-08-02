@@ -108,9 +108,76 @@
   function renderPreview(data, template, color, font) {
     if (!data.firstName && !data.lastName && !data.email) {
       preview.innerHTML = '<div style="color:#94a3b8;font-size:14px;text-align:center;padding:20px">Remplissez le formulaire pour voir l\'aperçu ✏️</div>';
+      fitPreview();
       return;
     }
     preview.innerHTML = Templates.render(data, template, color, font);
+    fitPreview();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPreview);
+    const imgs = preview.querySelectorAll('img');
+    if (imgs.length) {
+      let loaded = 0;
+      imgs.forEach(img => {
+        if (img.complete) loaded++;
+        else img.addEventListener('load', () => { loaded++; if (loaded >= imgs.length) fitPreview(); }, { once: true });
+      });
+      if (loaded >= imgs.length) fitPreview();
+    }
+  }
+
+  // Scale the signature preview to fit the container (mobile / narrow columns)
+  function fitPreview() {
+    if (!preview || !preview.innerHTML.trim()) return;
+    const child = preview.querySelector('.sig-scaler > table, .sig-scaler > div');
+    let scaler = preview.querySelector('.sig-scaler');
+    if (!child && !scaler) {
+      const first = preview.firstElementChild;
+      if (!first || (first.offsetWidth || 0) <= 0) return;
+      scaler = document.createElement('div');
+      scaler.className = 'sig-scaler';
+      scaler.appendChild(first);
+      preview.appendChild(scaler);
+    }
+    if (!scaler) return;
+    const el = scaler.firstElementChild;
+    if (!el) return;
+    const naturalW = el.offsetWidth;
+    const naturalH = el.offsetHeight;
+    const containerW = preview.clientWidth;
+    if (!naturalW || !naturalH || containerW <= 0) return;
+    const scale = Math.min(1, containerW / naturalW);
+    if (scale < 1) {
+      el.style.transform = `scale(${scale})`;
+      el.style.transformOrigin = 'top left';
+      scaler.style.width = `${Math.round(naturalW * scale)}px`;
+      scaler.style.height = `${Math.round(naturalH * scale)}px`;
+      preview.style.alignItems = 'flex-start';
+    } else {
+      el.style.transform = '';
+      scaler.style.width = 'auto';
+      scaler.style.height = 'auto';
+      preview.style.alignItems = '';
+    }
+  }
+
+  // Reset preview scaling before capture so exports keep full size
+  function resetPreviewScale() {
+    const scaler = preview.querySelector('.sig-scaler');
+    if (!scaler) return;
+    const el = scaler.firstElementChild;
+    if (el) el.style.transform = '';
+    const w = el ? el.offsetWidth : scaler.offsetWidth;
+    const h = el ? el.offsetHeight : scaler.offsetHeight;
+    scaler.style.width = `${w}px`;
+    scaler.style.height = `${h}px`;
+    preview.style.width = `${w}px`;
+    preview.style.maxWidth = 'none';
+    preview.style.alignItems = 'flex-start';
+  }
+  function restorePreviewScale() {
+    preview.style.width = '';
+    preview.style.maxWidth = '';
+    fitPreview();
   }
 
   function generateFileName(ext) {
@@ -149,7 +216,10 @@
   async function exportAs(type) {
     const el = preview;
     if (!el.innerHTML.trim()) return;
+    resetPreviewScale();
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', logging: false });
+    restorePreviewScale();
     if (type === 'png') canvas.toBlob(b => downloadBlob(b, generateFileName('png')), 'image/png');
     else if (type === 'jpg') canvas.toBlob(b => downloadBlob(b, generateFileName('jpg')), 'image/jpeg', 0.92);
     else if (type === 'pdf') {
@@ -180,7 +250,10 @@
   async function exportAllFormats() {
     const el = preview;
     if (!el.innerHTML.trim()) return;
+    resetPreviewScale();
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', logging: false });
+    restorePreviewScale();
     canvas.toBlob(b => downloadBlob(b, generateFileName('png')), 'image/png');
     canvas.toBlob(b => downloadBlob(b, generateFileName('jpg')), 'image/jpeg', 0.92);
     const imgData = canvas.toDataURL('image/png');
@@ -561,8 +634,10 @@
       }});
     });
 
-    // Dark mode
-    if (localStorage.getItem('sigDarkMode') === '1') toggleDarkMode();
+    // Dark mode (light mode par défaut)
+    localStorage.setItem('sigDarkMode', '0');
+    document.body.classList.remove('dark');
+    $('#darkModeToggle').textContent = '🌙';
     $('#darkModeToggle').addEventListener('click', toggleDarkMode);
 
     // History
@@ -572,6 +647,11 @@
     const data = getFormData();
     renderPreview(data, templateSel.value, colorInput.value, fontFamily.value);
     renderHistory();
+
+    // Re-fit preview on resize / orientation change
+    let resizeTimer;
+    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(fitPreview, 150); });
+    window.addEventListener('orientationchange', () => setTimeout(fitPreview, 350));
   }
 
   // Expose for inline onclick
