@@ -35,10 +35,9 @@ body {
 
 /* ===== NAVBAR ===== */
 .navbar {
-  background: var(--nav-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
+  background: var(--primary-gradient);
+  border-bottom: 1px solid rgba(255,255,255,.15);
+  box-shadow: 0 2px 10px rgba(37,99,235,.25);
   padding: 0 24px;
   position: sticky;
   top: 0;
@@ -96,6 +95,25 @@ body {
   background: var(--primary);
   border-radius: 2px;
 }
+
+/* ===== NAVBAR (dégradé) ===== */
+.navbar .logo {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: #ffffff;
+  color: #ffffff;
+}
+.navbar .nav-links a { color: rgba(255,255,255,.85); }
+.navbar .nav-links a:hover { color: #ffffff; background: rgba(255,255,255,.15); }
+.navbar .nav-links a.active { color: #ffffff; background: rgba(255,255,255,.22); }
+.navbar .nav-links a.active::after { background: #ffffff; }
+.navbar .btn-icon {
+  color: #ffffff;
+  border-color: rgba(255,255,255,.4);
+  background: rgba(255,255,255,.12);
+}
+.navbar .btn-icon:hover { background: rgba(255,255,255,.24); }
 
 /* ===== LAYOUT ===== */
 .main-layout {
@@ -453,9 +471,10 @@ body.dark {
 body.dark .signature-preview,
 body.dark .history-preview,
 body.dark .directory-preview { background: #ffffff; }
-body.dark .navbar { border-color: #1e293b; }
-body.dark .nav-links a:hover { background: rgba(255,255,255,.05); }
-body.dark .nav-links a.active { background: rgba(37,99,235,.15); }
+body.dark .navbar { border-color: rgba(255,255,255,.15); }
+body.dark .navbar .logo { color: #fff; }
+body.dark .nav-links a:hover { background: rgba(255,255,255,.15); }
+body.dark .nav-links a.active { background: rgba(255,255,255,.22); }
 body.dark .btn {
   background: #1e293b;
   color: #e2e8f0;
