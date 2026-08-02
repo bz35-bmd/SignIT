@@ -61,7 +61,14 @@ body {
   background-clip: text;
   letter-spacing: -.3px;
 }
+.brand { display: flex; align-items: center; gap: 10px; }
 .nav-controls { display: flex; align-items: center; gap: 6px; }
+.dz-flag {
+  display: block;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  cursor: default;
+}
 .nav-links { display: flex; gap: 2px; }
 .nav-links a {
   text-decoration: none;
