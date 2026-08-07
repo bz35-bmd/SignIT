@@ -215,15 +215,29 @@
   }
 
   // --- Export ---
-  async function exportAs(type) {
-    const el = preview;
-    if (!el.innerHTML.trim()) return;
+  function getSignatureElement() {
+    const scaler = preview.querySelector('.sig-scaler');
+    return scaler ? scaler.firstElementChild : null;
+  }
+
+  function captureSignatureCanvas() {
+    const el = getSignatureElement();
+    if (!el) return Promise.resolve(null);
     resetPreviewScale();
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', logging: false });
-    restorePreviewScale();
+    return new Promise((resolve, reject) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const w = el.offsetWidth;
+        const scale = Math.min(4, Math.max(2, 1600 / w));
+        html2canvas(el, { scale, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', logging: false })
+          .then(cv => { restorePreviewScale(); resolve(cv); })
+          .catch(e => { restorePreviewScale(); reject(e); });
+      }));
+    });
+  }
+
+  function downloadCanvas(canvas, type) {
     if (type === 'png') canvas.toBlob(b => downloadBlob(b, generateFileName('png')), 'image/png');
-    else if (type === 'jpg') canvas.toBlob(b => downloadBlob(b, generateFileName('jpg')), 'image/jpeg', 0.92);
+    else if (type === 'jpg') canvas.toBlob(b => downloadBlob(b, generateFileName('jpg')), 'image/jpeg', 0.95);
     else if (type === 'pdf') {
       const imgData = canvas.toDataURL('image/png');
       const { jsPDF } = window.jspdf;
@@ -237,6 +251,12 @@
       pdf.addImage(imgData, 'PNG', m, m, iw, ih);
       pdf.save(generateFileName('pdf'));
     }
+  }
+
+  async function exportAs(type) {
+    const canvas = await captureSignatureCanvas();
+    if (!canvas) return;
+    downloadCanvas(canvas, type);
     showToast(`Exporté en ${type.toUpperCase()} ✓`);
   }
 
@@ -250,25 +270,11 @@
   }
 
   async function exportAllFormats() {
-    const el = preview;
-    if (!el.innerHTML.trim()) return;
-    resetPreviewScale();
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', logging: false });
-    restorePreviewScale();
-    canvas.toBlob(b => downloadBlob(b, generateFileName('png')), 'image/png');
-    canvas.toBlob(b => downloadBlob(b, generateFileName('jpg')), 'image/jpeg', 0.92);
-    const imgData = canvas.toDataURL('image/png');
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('l', 'mm', 'a4');
-    const m = 8;
-    const pw = pdf.internal.pageSize.getWidth() - m * 2;
-    const ph = pdf.internal.pageSize.getHeight() - m * 2;
-    const r = canvas.width / canvas.height;
-    const iw = r > pw / ph ? pw : ph * r;
-    const ih = r > pw / ph ? pw / r : ph;
-    pdf.addImage(imgData, 'PNG', m, m, iw, ih);
-    pdf.save(generateFileName('pdf'));
+    const canvas = await captureSignatureCanvas();
+    if (!canvas) return;
+    downloadCanvas(canvas, 'png');
+    downloadCanvas(canvas, 'jpg');
+    downloadCanvas(canvas, 'pdf');
     showToast('Tous les formats exportés ✓');
   }
 
@@ -476,24 +482,56 @@
     downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), 'equipe_signatures.csv');
   }
 
-  async function exportTeamPdf() {
-    if (!team.length) { showToast('Aucun membre dans l\'équipe'); return; }
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('l', 'mm', 'a4');
-    for (let i = 0; i < team.length; i++) {
-      if (i > 0) pdf.addPage();
+  async function captureTeamCanvases() {
+    const canvases = [];
+    for (const m of team) {
       const div = document.createElement('div');
-      div.innerHTML = Templates.render(team[i], 'classic', '#1a73e8');
-      div.style.position = 'absolute'; div.style.left = '-9999px';
+      div.innerHTML = Templates.render(m, m._template || 'classic', m._color || '#1a73e8', m._font || '');
+      div.style.position = 'absolute'; div.style.left = '-9999px'; div.style.top = '0';
       document.body.appendChild(div);
       const canvas = await html2canvas(div, { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', logging: false });
       document.body.removeChild(div);
+      canvases.push(canvas);
+    }
+    return canvases;
+  }
+
+  async function exportTeamPdf() {
+    if (!team.length) { showToast('Aucun membre dans l\'équipe'); return; }
+    const canvases = await captureTeamCanvases();
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    canvases.forEach((canvas, i) => {
+      if (i > 0) pdf.addPage();
       const imgData = canvas.toDataURL('image/png');
       const w = 190; const h = (canvas.height / canvas.width) * w;
       pdf.addImage(imgData, 'PNG', 10, 10, w, h);
-    }
+    });
     pdf.save('annuaire_equipe.pdf');
     showToast(`PDF généré : ${team.length} membre(s)`);
+  }
+
+  async function exportTeamImage(format) {
+    if (!team.length) { showToast('Aucun membre dans l\'équipe'); return; }
+    const canvases = await captureTeamCanvases();
+    const gap = 40;
+    const maxW = Math.max(...canvases.map(c => c.width));
+    const totalH = canvases.reduce((s, c) => s + c.height, 0) + gap * (canvases.length - 1);
+    const out = document.createElement('canvas');
+    out.width = maxW;
+    out.height = totalH;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, out.width, out.height);
+    let y = 0;
+    for (const c of canvases) {
+      ctx.drawImage(c, Math.round((maxW - c.width) / 2), y);
+      y += c.height + gap;
+    }
+    const ext = format === 'png' ? 'png' : 'jpg';
+    const q = format === 'png' ? undefined : 0.95;
+    out.toBlob(b => downloadBlob(b, `annuaire_equipe.${ext}`), `image/${format === 'png' ? 'png' : 'jpeg'}`, q);
+    showToast(`Image ${format.toUpperCase()} générée : ${team.length} membre(s)`);
   }
 
   // --- Init ---
@@ -630,6 +668,8 @@
 
     $('#exportTeamCsvBtn').addEventListener('click', exportTeamCsv);
     $('#exportTeamPdfBtn').addEventListener('click', withLoading($('#exportTeamPdfBtn'), exportTeamPdf));
+    $('#exportTeamPngBtn').addEventListener('click', withLoading($('#exportTeamPngBtn'), () => exportTeamImage('png')));
+    $('#exportTeamJpgBtn').addEventListener('click', withLoading($('#exportTeamJpgBtn'), () => exportTeamImage('jpg')));
     $('#clearTeamBtn').addEventListener('click', () => { if (confirm('Effacer toute l\'équipe ?')) { team = []; saveTeam(); } });
     $('#importTeamBtn').addEventListener('click', () => $('#teamCsvImport').click());
     $('#teamCsvImport').addEventListener('change', e => {
@@ -701,7 +741,7 @@
     },
     {
       keywords: ['template','modèle','modele','classique','moderne','corporate','theme','thème','design','style'],
-      reply: 'SignIT propose **3 templates** :\n\n**Classique** 📄 — Layout traditionnel, idéal pour un usage professionnel standard. Largeur 640px.\n\n**Moderne** 🎨 — Design épuré avec photo à droite. Largeur 620px.\n\n**Corporate** 🏢 — Style entreprise avec bandeau couleur en haut. Largeur 640px.\n\nPour changer : utilisez le menu déroulant **Template** dans le formulaire. L\'aperçu se met à jour instantanément.'
+      reply: 'SignIT propose **3 templates** hiérarchisés :\n\n**Classique** 📄 — Contenu minimal : identité, fonction et coordonnées uniquement (pas de logo, photo, réseaux sociaux, QR, statut ni bannière).\n\n**Moderne** 🎨 — Reprend le classique **+ logo d\'entreprise + photo** à gauche du nom. Carte épurée avec barre de dégradé.\n\n**Corporate** 🏢 — Tout ce que contient le moderne **+ icônes réseaux sociaux + QR code (vCard) + signature dynamique + bannière**. Bandeau entreprise avec liseré couleur.\n\nPour changer : utilisez le menu déroulant **Template** dans le formulaire. L\'aperçu se met à jour instantanément.'
     },
     {
       keywords: ['couleur','color','couleurs','palette','teinte','nuance','personnalisée'],
